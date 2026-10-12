@@ -71,7 +71,7 @@ jobs:
       CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
     strategy:
       matrix:
-        arch: [ "all", "arm", "arm64", "x86", "x86_64" ]
+        arch: [ "all" ]
       fail-fast: false
 
     steps:
@@ -99,7 +99,7 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: SwiftTLauncher-Test-${{ matrix.arch }}
+          name: SwiftTLauncher-Test-all
           path: ZalithLauncher/build/outputs/apk/debug/*.apk
           if-no-files-found: error
           retention-days: 7
