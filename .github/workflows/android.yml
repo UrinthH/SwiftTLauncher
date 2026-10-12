@@ -7,7 +7,7 @@ on:
 
 jobs:
   BuildRelease:
-    if: !startsWith(github.ref, 'refs/pull/') && github.ref_name == 'main'
+    if: ${{ !startsWith(github.ref, 'refs/pull/') && github.ref_name == 'main' }}
     runs-on: ubuntu-22.04
     strategy:
       matrix:
@@ -64,6 +64,8 @@ jobs:
   BuildDebug:
     if: startsWith(github.ref, 'refs/pull/') || github.ref_name != 'main'
     runs-on: ubuntu-22.04
+    env:
+      ZL_BUILD_TYPE: RELEASE
     strategy:
       matrix:
         arch: [ "all", "arm", "arm64", "x86", "x86_64" ]
@@ -85,13 +87,15 @@ jobs:
           mkdir out
           ./gradlew jre_lwjgl3glfw:build --no-daemon
 
-      - name: Build Debug ${{matrix.arch}}
+      - name: Build Release ${{matrix.arch}}
+        env:
+          MOVTERY_KEYSTORE_PASSWORD: ${{ secrets.MOVTERY_KEYSTORE_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew ZalithLauncher:assembleDebug -Darch=${{ matrix.arch }}
+          ./gradlew ZalithLauncher:assembleRelease -Darch=${{ matrix.arch }}
 
-      - name: Upload Debug ${{matrix.arch}}
+      - name: Upload Release ${{matrix.arch}}
         uses: actions/upload-artifact@v4
         with:
-          name: ZalithLauncher(Debug) ${{ matrix.arch }}
-          path: ZalithLauncher/build/outputs/apk/debug/*
+          name: SwiftTLauncher(Release) ${{ matrix.arch }}
+          path: ZalithLauncher/build/outputs/apk/release/*
