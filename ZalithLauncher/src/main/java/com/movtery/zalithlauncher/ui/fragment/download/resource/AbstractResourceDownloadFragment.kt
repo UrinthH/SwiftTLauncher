@@ -57,7 +57,7 @@ abstract class AbstractResourceDownloadFragment(
     private lateinit var mSortAdapter: ObjectSpinnerAdapter<Sort>
     private lateinit var mCategoryAdapter: ObjectSpinnerAdapter<Category>
     private lateinit var mModLoaderAdapter: ObjectSpinnerAdapter<ModLoader>
-    private var mCurrentPlatform: Platform = Platform.CURSEFORGE
+    private var mCurrentPlatform: Platform = recommendedPlatform
     private val mFilters: Filters = Filters()
 
     private val mInfoAdapter = InfoAdapter(parentFragment,
