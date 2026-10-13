@@ -1,6 +1,7 @@
 package net.kdt.pojavlaunch.customcontrols;
 
 import android.content.Context;
+import android.view.KeyEvent;
 
 import com.google.gson.JsonSyntaxException;
 import com.movtery.zalithlauncher.R;
@@ -71,16 +72,94 @@ public class LayoutConverter {
             if (version == 6 || version == 7) {
                 return convertV6_7Layout(layoutJobj);
             }
-            // Mojo Launcher exports version 9 with the same control data fields.
-            // ControlData already evaluates its px(...) and ${...} position expressions.
             if (version == 8 || version == 9) {
-                return Tools.GLOBAL_GSON.fromJson(jsonLayoutData, CustomControls.class);
+                CustomControls layout = Tools.GLOBAL_GSON.fromJson(jsonLayoutData, CustomControls.class);
+                // Mojo Launcher v9 stores Android KeyEvent codes, while Zalith uses GLFW codes.
+                if (version == 9) convertMojoV9Keycodes(layout);
+                return layout;
             }
             if (showError) {
                 IOException ioException = new IOException();
                 Tools.showError(ctx, ctx.getString(R.string.controls_unsupported_layout_version), ioException);
             }
             return null;
+        }
+    }
+
+    /**
+     * Convert Android key codes exported by Mojo Launcher to GLFW key codes used by Zalith.
+     * Negative values are Zalith's special virtual-button codes and zero means no key.
+     */
+    private static void convertMojoV9Keycodes(CustomControls layout) {
+        for (ControlData data : layout.mControlDataList) convertMojoV9Keycodes(data);
+        for (ControlDrawerData drawer : layout.mDrawerDataList) {
+            convertMojoV9Keycodes(drawer.properties);
+            for (ControlData data : drawer.buttonProperties) convertMojoV9Keycodes(data);
+        }
+        for (ControlJoystickData data : layout.mJoystickDataList) convertMojoV9Keycodes(data);
+    }
+
+    private static void convertMojoV9Keycodes(ControlData data) {
+        if (data.keycodes == null) return;
+        for (int i = 0; i < data.keycodes.length; i++) {
+            data.keycodes[i] = androidToGlfwKeycode(data.keycodes[i]);
+        }
+    }
+
+    private static int androidToGlfwKeycode(int keycode) {
+        if (keycode <= 0) return keycode;
+        if (keycode >= KeyEvent.KEYCODE_A && keycode <= KeyEvent.KEYCODE_Z) {
+            return LwjglGlfwKeycode.GLFW_KEY_A + keycode - KeyEvent.KEYCODE_A;
+        }
+        if (keycode >= KeyEvent.KEYCODE_0 && keycode <= KeyEvent.KEYCODE_9) {
+            return LwjglGlfwKeycode.GLFW_KEY_0 + keycode - KeyEvent.KEYCODE_0;
+        }
+        if (keycode >= KeyEvent.KEYCODE_F1 && keycode <= KeyEvent.KEYCODE_F12) {
+            return LwjglGlfwKeycode.GLFW_KEY_F1 + keycode - KeyEvent.KEYCODE_F1;
+        }
+        if (keycode >= KeyEvent.KEYCODE_NUMPAD_0 && keycode <= KeyEvent.KEYCODE_NUMPAD_9) {
+            return LwjglGlfwKeycode.GLFW_KEY_KP_0 + keycode - KeyEvent.KEYCODE_NUMPAD_0;
+        }
+        switch (keycode) {
+            case KeyEvent.KEYCODE_SPACE: return LwjglGlfwKeycode.GLFW_KEY_SPACE;
+            case KeyEvent.KEYCODE_APOSTROPHE: return LwjglGlfwKeycode.GLFW_KEY_APOSTROPHE;
+            case KeyEvent.KEYCODE_COMMA: return LwjglGlfwKeycode.GLFW_KEY_COMMA;
+            case KeyEvent.KEYCODE_MINUS: return LwjglGlfwKeycode.GLFW_KEY_MINUS;
+            case KeyEvent.KEYCODE_PERIOD: return LwjglGlfwKeycode.GLFW_KEY_PERIOD;
+            case KeyEvent.KEYCODE_SLASH: return LwjglGlfwKeycode.GLFW_KEY_SLASH;
+            case KeyEvent.KEYCODE_SEMICOLON: return LwjglGlfwKeycode.GLFW_KEY_SEMICOLON;
+            case KeyEvent.KEYCODE_EQUALS: return LwjglGlfwKeycode.GLFW_KEY_EQUAL;
+            case KeyEvent.KEYCODE_LEFT_BRACKET: return LwjglGlfwKeycode.GLFW_KEY_LEFT_BRACKET;
+            case KeyEvent.KEYCODE_BACKSLASH: return LwjglGlfwKeycode.GLFW_KEY_BACKSLASH;
+            case KeyEvent.KEYCODE_RIGHT_BRACKET: return LwjglGlfwKeycode.GLFW_KEY_RIGHT_BRACKET;
+            case KeyEvent.KEYCODE_GRAVE: return LwjglGlfwKeycode.GLFW_KEY_GRAVE_ACCENT;
+            case KeyEvent.KEYCODE_ESCAPE: return LwjglGlfwKeycode.GLFW_KEY_ESCAPE;
+            case KeyEvent.KEYCODE_ENTER: return LwjglGlfwKeycode.GLFW_KEY_ENTER;
+            case KeyEvent.KEYCODE_TAB: return LwjglGlfwKeycode.GLFW_KEY_TAB;
+            case KeyEvent.KEYCODE_DEL: return LwjglGlfwKeycode.GLFW_KEY_BACKSPACE;
+            case KeyEvent.KEYCODE_FORWARD_DEL: return LwjglGlfwKeycode.GLFW_KEY_DELETE;
+            case KeyEvent.KEYCODE_INSERT: return LwjglGlfwKeycode.GLFW_KEY_INSERT;
+            case KeyEvent.KEYCODE_DPAD_RIGHT: return LwjglGlfwKeycode.GLFW_KEY_RIGHT;
+            case KeyEvent.KEYCODE_DPAD_LEFT: return LwjglGlfwKeycode.GLFW_KEY_LEFT;
+            case KeyEvent.KEYCODE_DPAD_DOWN: return LwjglGlfwKeycode.GLFW_KEY_DOWN;
+            case KeyEvent.KEYCODE_DPAD_UP: return LwjglGlfwKeycode.GLFW_KEY_UP;
+            case KeyEvent.KEYCODE_PAGE_UP: return LwjglGlfwKeycode.GLFW_KEY_PAGE_UP;
+            case KeyEvent.KEYCODE_PAGE_DOWN: return LwjglGlfwKeycode.GLFW_KEY_PAGE_DOWN;
+            case KeyEvent.KEYCODE_MOVE_HOME: return LwjglGlfwKeycode.GLFW_KEY_HOME;
+            case KeyEvent.KEYCODE_MOVE_END: return LwjglGlfwKeycode.GLFW_KEY_END;
+            case KeyEvent.KEYCODE_CAPS_LOCK: return LwjglGlfwKeycode.GLFW_KEY_CAPS_LOCK;
+            case KeyEvent.KEYCODE_SCROLL_LOCK: return LwjglGlfwKeycode.GLFW_KEY_SCROLL_LOCK;
+            case KeyEvent.KEYCODE_NUM_LOCK: return LwjglGlfwKeycode.GLFW_KEY_NUM_LOCK;
+            case KeyEvent.KEYCODE_SYSRQ: return LwjglGlfwKeycode.GLFW_KEY_PRINT_SCREEN;
+            case KeyEvent.KEYCODE_BREAK: return LwjglGlfwKeycode.GLFW_KEY_PAUSE;
+            case KeyEvent.KEYCODE_SHIFT_LEFT: return LwjglGlfwKeycode.GLFW_KEY_LEFT_SHIFT;
+            case KeyEvent.KEYCODE_SHIFT_RIGHT: return LwjglGlfwKeycode.GLFW_KEY_RIGHT_SHIFT;
+            case KeyEvent.KEYCODE_CTRL_LEFT: return LwjglGlfwKeycode.GLFW_KEY_LEFT_CONTROL;
+            case KeyEvent.KEYCODE_CTRL_RIGHT: return LwjglGlfwKeycode.GLFW_KEY_RIGHT_CONTROL;
+            case KeyEvent.KEYCODE_ALT_LEFT: return LwjglGlfwKeycode.GLFW_KEY_LEFT_ALT;
+            case KeyEvent.KEYCODE_ALT_RIGHT: return LwjglGlfwKeycode.GLFW_KEY_RIGHT_ALT;
+            case KeyEvent.KEYCODE_MENU: return LwjglGlfwKeycode.GLFW_KEY_MENU;
+            default: return LwjglGlfwKeycode.GLFW_KEY_UNKNOWN;
         }
     }
 
