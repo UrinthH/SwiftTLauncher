@@ -10,12 +10,17 @@ plugins {
 apply(plugin = "stringfog")
 
 val getCFApiKey = {
-    System.getenv("CURSEFORGE_API_KEY") ?: run {
+    // GitHub Actions may define the secret as an empty string when it is not configured.
+    // Treat blank environment/file values as missing instead of embedding an empty API key.
+    System.getenv("CURSEFORGE_API_KEY")?.trim()?.takeIf { it.isNotEmpty() } ?: run {
         val curseforgeKeyFile = File(rootDir, "curseforge_key.txt")
-        if (curseforgeKeyFile.canRead() && curseforgeKeyFile.isFile) {
-            curseforgeKeyFile.readText()
+        val fileKey = if (curseforgeKeyFile.canRead() && curseforgeKeyFile.isFile) {
+            curseforgeKeyFile.readText().trim()
         } else {
-            logger.warn("BUILD: You have no CurseForge key, the curseforge api will get disabled !")
+            ""
+        }
+        fileKey.takeIf { it.isNotEmpty() } ?: run {
+            logger.warn("BUILD: No CurseForge API key configured; CurseForge search will not work until CURSEFORGE_API_KEY is set.")
             "DUMMY"
         }
     }

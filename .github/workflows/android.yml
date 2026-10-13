@@ -7,7 +7,7 @@ on:
 
 jobs:
   BuildRelease:
-    if: github.repository_owner == 'ZalithLauncher' && !startsWith(github.ref, 'refs/pull/') && github.ref_name == 'main'
+    if: ${{ !startsWith(github.ref, 'refs/pull/') && github.ref_name == 'main' }}
     runs-on: ubuntu-22.04
     strategy:
       matrix:
@@ -44,7 +44,7 @@ jobs:
       - name: Build JRE JAR files
         run: |
           chmod +x gradlew
-          mkdir out
+          mkdir -p out
           ./gradlew jre_lwjgl3glfw:build --no-daemon
 
       - name: Build Release ${{ matrix.arch }}
@@ -52,21 +52,26 @@ jobs:
           MOVTERY_KEYSTORE_PASSWORD: ${{ secrets.MOVTERY_KEYSTORE_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew ZalithLauncher:assemblerelease -Darch=${{ matrix.arch }}
+          ./gradlew ZalithLauncher:assembleRelease -Darch=${{ matrix.arch }} --no-daemon
 
-      - name: Upload Release ${{matrix.arch}}
-        continue-on-error: true
+      - name: Upload Release ${{ matrix.arch }}
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: ZalithLauncher(Release) ${{ matrix.arch }}
-          path: ZalithLauncher/build/outputs/apk/release/*
+          name: SwiftTLauncher-Release-${{ matrix.arch }}
+          path: ZalithLauncher/build/outputs/apk/release/*.apk
+          if-no-files-found: error
+          retention-days: 7
 
-  BuildDebug:
+  BuildTest:
     if: startsWith(github.ref, 'refs/pull/') || github.ref_name != 'main'
     runs-on: ubuntu-22.04
+    env:
+      ZL_BUILD_TYPE: RELEASE
+      CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
     strategy:
       matrix:
-        arch: [ "all", "arm", "arm64", "x86", "x86_64" ]
+        arch: [ "all" ]
       fail-fast: false
 
     steps:
@@ -82,16 +87,19 @@ jobs:
       - name: Build JRE JAR files
         run: |
           chmod +x gradlew
-          mkdir out
+          mkdir -p out
           ./gradlew jre_lwjgl3glfw:build --no-daemon
 
-      - name: Build Debug ${{matrix.arch}}
+      - name: Build test APK ${{ matrix.arch }}
         run: |
           chmod +x gradlew
-          ./gradlew ZalithLauncher:assembleDebug -Darch=${{ matrix.arch }}
+          ./gradlew ZalithLauncher:assembleDebug -Darch=${{ matrix.arch }} --no-daemon
 
-      - name: Upload Debug ${{matrix.arch}}
+      - name: Upload test APK ${{ matrix.arch }}
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: ZalithLauncher(Debug) ${{ matrix.arch }}
-          path: ZalithLauncher/build/outputs/apk/debug/*
+          name: SwiftTLauncher-test-all
+          path: ZalithLauncher/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
