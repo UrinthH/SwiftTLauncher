@@ -71,7 +71,9 @@ public class LayoutConverter {
             if (version == 6 || version == 7) {
                 return convertV6_7Layout(layoutJobj);
             }
-            if (version == 8) {
+            // Mojo Launcher exports version 9 with the same control data fields.
+            // ControlData already evaluates its px(...) and ${...} position expressions.
+            if (version == 8 || version == 9) {
                 return Tools.GLOBAL_GSON.fromJson(jsonLayoutData, CustomControls.class);
             }
             if (showError) {
