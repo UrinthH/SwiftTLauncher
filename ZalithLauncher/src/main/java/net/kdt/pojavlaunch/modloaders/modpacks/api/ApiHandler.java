@@ -71,7 +71,24 @@ public class ApiHandler {
             conn.disconnect();
             return data;
         } catch (FileNotFoundException e) {
-            Logging.d("ApiHandler", "File Not Found! " + Tools.printToString(e));
+            // HttpURLConnection routes HTTP 4xx responses through getErrorStream().
+            // Log the status and response body so API-key and rate-limit failures are diagnosable.
+            if (conn != null) {
+                try {
+                    int status = conn.getResponseCode();
+                    InputStream errorStream = conn.getErrorStream();
+                    String errorBody = errorStream == null ? "" : Tools.read(errorStream);
+                    if (errorStream != null) errorStream.close();
+                    Logging.e("ApiHandler", "HTTP " + status + " for " + url
+                            + (errorBody.isEmpty() ? "" : " — " + errorBody));
+                } catch (Exception logError) {
+                    Logging.e("ApiHandler", "HTTP request failed: " + url + "\\n" + Tools.printToString(e));
+                } finally {
+                    conn.disconnect();
+                }
+            } else {
+                Logging.e("ApiHandler", "File Not Found! " + Tools.printToString(e));
+            }
             return null;
         } catch(InterruptedIOException e) {
             Logging.d("ApiHandler", "The connection has been interrupted, or has been canceled.\n" + Tools.printToString(e));
